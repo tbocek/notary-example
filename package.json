@@ -1,0 +1,15 @@
+{
+  "scripts": {
+    "dev": "preveltekit -d",
+    "build": "preveltekit -p",
+    "stage": "preveltekit -s"
+  },
+  "dependencies": {
+    "fast-text-encoding": "^1.0.6",
+    "svelte": "^5.39.4",
+    "viem": "^2.37.7"
+  },
+  "devDependencies": {
+    "preveltekit": "1.0.0"
+  }
+}
