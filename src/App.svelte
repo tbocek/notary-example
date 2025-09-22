@@ -1,25 +1,27 @@
 <script>
     import { onMount } from "svelte";
-    import { createPublicClient, createWalletClient, custom, http, sha256 } from "viem";
-    import { mainnet, sepolia } from "viem/chains";    const abi = [
+    import { encodeFunctionData, decodeFunctionResult } from 'viem';
+
+    const abi = [
         { inputs: [{ internalType: "bytes32", name: "hash", type: "bytes32" }], name: "store", outputs: [], stateMutability: "nonpayable", type: "function" },
         { inputs: [{ internalType: "address", name: "recipient", type: "address" }, { internalType: "bytes32", name: "hash", type: "bytes32" }], name: "verify", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" }
     ];
     const contractAddress = "0x6f4BDa64922e1E45DBDd3403535127408125e6B8";
 
-    let publicClient, walletClient;
     let account = $state(null);
     let isConnected = $state(false);
     let isTestnet = $state(false);
-    let currentChain = $state(mainnet);
     let hash = $state(null);
     let status = $state("Choose network and connect MetaMask");
     let isDisabled = $state(true);
     let fileName = $state(null);
 
-    function initializeClients() {
-        publicClient = createPublicClient({ chain: currentChain, transport: http() });
-        walletClient = createWalletClient({ chain: currentChain, transport: custom(window.ethereum) });
+    // Web Crypto API for hashing
+    async function hashFile(file) {
+        const buffer = await file.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+        return '0x' + Array.from(new Uint8Array(hashBuffer))
+            .map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
     onMount(async () => {
@@ -35,8 +37,6 @@
                 isConnected = true;
                 const chainId = await window.ethereum.request({ method: "eth_chainId" });
                 isTestnet = chainId === "0xaa36a7";
-                currentChain = isTestnet ? sepolia : mainnet;
-                initializeClients();
                 status = `Connected to ${account.slice(0, 6)}...${account.slice(-4)}`;
             }
         } catch (error) {
@@ -46,24 +46,37 @@
 
     async function connectWallet() {
         try {
-            currentChain = isTestnet ? sepolia : mainnet;
-            initializeClients();
-
             await window.ethereum.request({ method: "eth_requestAccounts" });
 
-            const chainId = currentChain.id === 1 ? "0x1" : "0xaa36a7";
+            // Switch to desired network
+            const chainId = isTestnet ? "0xaa36a7" : "0x1";
             try {
-                await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId }] });
+                await window.ethereum.request({ 
+                    method: "wallet_switchEthereumChain", 
+                    params: [{ chainId }] 
+                });
             } catch (switchError) {
                 if (switchError.code === 4902) {
-                    status = "Network not added to MetaMask. Please add it manually.";
-                    return;
+                    if (isTestnet) {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: '0xaa36a7',
+                                chainName: 'Sepolia',
+                                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                                rpcUrls: ['https://rpc.sepolia.org'],
+                                blockExplorerUrls: ['https://sepolia.etherscan.io']
+                            }]
+                        });
+                    }
                 } else if (switchError.code === 4001) {
                     status = "Connected but network switch cancelled";
+                    return;
                 }
             }
 
-            [account] = await walletClient.getAddresses();
+            const accounts = await window.ethereum.request({ method: "eth_accounts" });
+            account = accounts[0];
             isConnected = true;
             status = `Connected to ${account.slice(0, 6)}...${account.slice(-4)}`;
         } catch (error) {
@@ -72,17 +85,12 @@
     }
 
     async function disconnectWallet() {
-        try {
-            await window.ethereum.request({ method: "wallet_revokePermissions", params: [{ eth_accounts: {} }] });
-            status = "Disconnected from MetaMask";
-        } catch (error) {
-            status = "Disconnected (local only)";
-        }
         account = null;
         isConnected = false;
         hash = null;
         fileName = null;
         isDisabled = true;
+        status = "Disconnected";
     }
 
     async function filesChange(fileList) {
@@ -91,38 +99,68 @@
             return;
         }
 
-        const fr = new FileReader();
-        fr.onload = async (e) => {
-            hash = sha256(new Uint8Array(e.target.result));
-            try {
-                const result = await publicClient.readContract({
-                    address: contractAddress, abi, functionName: "verify", args: [account, hash]
-                });
-
-                if (result == 0) {
-                    isDisabled = false;
-                    status = `Not yet stored from account: ${account}`;
-                } else {
-                    isDisabled = true;
-                    status = `<b>VERIFIED</b> in the blockchain! Timestamp: ${Number(result)}`;
-                }
-            } catch (error) {
-                isDisabled = false;
-                status = `Error: ${error}`;
-            }
-        };
-        fr.readAsArrayBuffer(fileList[0]);
+        hash = await hashFile(fileList[0]);
         fileName = fileList[0].name;
+
+        try {
+            // Encode function call using minimal viem
+            const data = encodeFunctionData({
+                abi,
+                functionName: "verify",
+                args: [account, hash]
+            });
+            
+            // Direct RPC call
+            const result = await window.ethereum.request({
+                method: 'eth_call',
+                params: [{
+                    to: contractAddress,
+                    data: data
+                }, 'latest']
+            });
+
+            // Decode result using minimal viem
+            const [timestamp] = decodeFunctionResult({
+                abi,
+                functionName: "verify",
+                data: result
+            });
+
+            if (timestamp.toString() === "0") {
+                isDisabled = false;
+                status = `Not yet stored from account: ${account}`;
+            } else {
+                isDisabled = true;
+                status = `<b>VERIFIED</b> in the blockchain! Timestamp: ${timestamp.toString()}`;
+            }
+        } catch (error) {
+            isDisabled = false;
+            status = `Error: ${error.message}`;
+        }
     }
 
     async function store() {
         try {
-            const txHash = await walletClient.writeContract({
-                account, address: contractAddress, abi, functionName: "store", args: [hash]
+            // Encode function call
+            const data = encodeFunctionData({
+                abi,
+                functionName: "store",
+                args: [hash]
             });
+            
+            // Send transaction via MetaMask
+            const txHash = await window.ethereum.request({
+                method: 'eth_sendTransaction',
+                params: [{
+                    from: account,
+                    to: contractAddress,
+                    data: data
+                }]
+            });
+            
             status = `Stored, tx is: ${txHash}`;
         } catch (error) {
-            status = `Error: ${error}`;
+            status = `Error: ${error.message}`;
         }
         isDisabled = true;
     }
@@ -251,8 +289,6 @@
         background: #ccc;
         cursor: not-allowed;
     }
-
-
 
     .dropbox {
         outline: 2px dashed grey;

@@ -1,8 +1,8 @@
 {
   "scripts": {
-    "dev": "preveltekit -d",
-    "build": "preveltekit -p",
-    "stage": "preveltekit -s"
+    "dev": "preveltekit dev",
+    "build": "preveltekit prod",
+    "stage": "preveltekit stage"
   },
   "dependencies": {
     "fast-text-encoding": "^1.0.6",
@@ -10,6 +10,6 @@
     "viem": "^2.37.7"
   },
   "devDependencies": {
-    "preveltekit": "1.0.0"
+    "preveltekit": "1.0.2"
   }
 }
