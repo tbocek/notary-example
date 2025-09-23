@@ -1,4 +1,5 @@
 <script>
+    import 'fast-text-encoding'; //polyfill
     import { onMount } from "svelte";
     import { encodeFunctionData, decodeFunctionResult } from 'viem';
 
