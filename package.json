@@ -1,8 +1,8 @@
 {
   "scripts": {
     "dev": "preveltekit dev",
-    "build": "preveltekit prod",
-    "stage": "preveltekit stage"
+    "build": "NODE_ENV=production preveltekit prod",
+    "stage": "NODE_ENV=production preveltekit stage"
   },
   "dependencies": {
     "fast-text-encoding": "^1.0.6",
