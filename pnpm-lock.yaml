@@ -16,7 +16,7 @@ importers:
         version: 5.39.4
       viem:
         specifier: ^2.37.7
-        version: 2.37.7
+        version: 2.37.8
     devDependencies:
       preveltekit:
         specifier: 1.0.3
@@ -746,8 +746,8 @@ packages:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
 
-  viem@2.37.7:
-    resolution: {integrity: sha512-KmTK/xc6790I0V9iaiJz8C3RdGevpU+fPvg53eOlfEfsfz0wCypXqOlOmCcjzkpmf2XFoEtu9MAxhMqk8YdNNA==}
+  viem@2.37.8:
+    resolution: {integrity: sha512-mL+5yvCQbRIR6QvngDQMfEiZTfNWfd+/QL5yFaOoYbpH3b1Q2ddwF7YG2eI2AcYSh9LE1gtUkbzZLFUAVyj4oQ==}
     peerDependencies:
       typescript: '>=5.0.4'
     peerDependenciesMeta:
@@ -1575,7 +1575,7 @@ snapshots:
 
   vary@1.1.2: {}
 
-  viem@2.37.7:
+  viem@2.37.8:
     dependencies:
       '@noble/curves': 1.9.1
       '@noble/hashes': 1.8.0
