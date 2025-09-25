@@ -1,5 +1,5 @@
 <script>
-    import 'fast-text-encoding'; //polyfill
+    import 'fast-text-encoding';
     import { onMount } from "svelte";
     import { encodeFunctionData, decodeFunctionResult } from 'viem';
 
@@ -17,7 +17,6 @@
     let isDisabled = $state(true);
     let fileName = $state(null);
 
-    // Web Crypto API for hashing
     async function hashFile(file) {
         const buffer = await file.arrayBuffer();
         const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
@@ -25,18 +24,16 @@
             .map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
-    // Add this function to detect and update network state
     function updateNetworkState(chainId) {
-        const sepoliaChainId = "0xaa36a7"; // 11155111 in hex
-        const mainnetChainId = "0x1"; // 1 in hex
-        
-        // Normalize chainId to lowercase hex string
         const normalizedChainId = typeof chainId === 'string' ? chainId.toLowerCase() : `0x${chainId.toString(16)}`;
-        
-        const wasTestnet = isTestnet;
-        isTestnet = normalizedChainId === sepoliaChainId.toLowerCase();
-        
+        isTestnet = normalizedChainId === "0xaa36a7";
         return normalizedChainId;
+    }
+
+    function updateStatus() {
+        if (account) {
+            status = `Connected to ${account.slice(0, 6)}...${account.slice(-4)} on ${isTestnet ? 'Sepolia' : 'Mainnet'}`;
+        }
     }
 
     onMount(async () => {
@@ -45,19 +42,15 @@
             return;
         }
 
-        // Listen for network changes
         window.ethereum.on('chainChanged', (chainId) => {
-            const normalizedChainId = updateNetworkState(chainId);
-            if (account) {
-                status = `Connected to ${account.slice(0, 6)}...${account.slice(-4)} on ${isTestnet ? 'Sepolia' : 'Mainnet'}`;
-            }
+            updateNetworkState(chainId);
+            updateStatus();
         });
 
-        // Listen for account changes
         window.ethereum.on('accountsChanged', (accounts) => {
             if (accounts.length > 0) {
                 account = accounts[0];
-                status = `Connected to ${account.slice(0, 6)}...${account.slice(-4)} on ${isTestnet ? 'Sepolia' : 'Mainnet'}`;
+                updateStatus();
             } else {
                 disconnectWallet();
             }
@@ -65,17 +58,12 @@
 
         try {
             const accounts = await window.ethereum.request({ method: "eth_accounts" });
-            
             if (accounts.length > 0) {
                 account = accounts[0];
                 isConnected = true;
-                
-                // Get current network and update state
                 const chainId = await window.ethereum.request({ method: "eth_chainId" });
-                
-                const normalizedChainId = updateNetworkState(chainId);
-                
-                status = `Connected to ${account.slice(0, 6)}...${account.slice(-4)} on ${isTestnet ? 'Sepolia' : 'Mainnet'}`;
+                updateNetworkState(chainId);
+                updateStatus();
             }
         } catch (error) {
             console.error("Error checking connection:", error);
@@ -85,18 +73,10 @@
     async function connectWallet() {
         try {
             await window.ethereum.request({ method: "eth_requestAccounts" });
-
-            // Get current network first
             const currentChainId = await window.ethereum.request({ method: "eth_chainId" });
-            
             const desiredChainId = isTestnet ? "0xaa36a7" : "0x1";
-            
-            // Normalize for comparison
-            const normalizedCurrent = currentChainId.toLowerCase();
-            const normalizedDesired = desiredChainId.toLowerCase();
-            
-            // Only switch if not on desired network
-            if (normalizedCurrent !== normalizedDesired) {
+
+            if (currentChainId.toLowerCase() !== desiredChainId.toLowerCase()) {
                 try {
                     await window.ethereum.request({ 
                         method: "wallet_switchEthereumChain", 
@@ -115,12 +95,9 @@
                             }]
                         });
                     } else if (switchError.code === 4001) {
-                        // Get the actual current network instead of assuming
                         const actualChainId = await window.ethereum.request({ method: "eth_chainId" });
-                        
                         updateNetworkState(actualChainId);
                         status = "Connected but network switch cancelled";
-                        
                         const accounts = await window.ethereum.request({ method: "eth_accounts" });
                         account = accounts[0];
                         isConnected = true;
@@ -129,34 +106,26 @@
                 }
             }
 
-            // Update state based on final network
             const finalChainId = await window.ethereum.request({ method: "eth_chainId" });
-            
             updateNetworkState(finalChainId);
-            
             const accounts = await window.ethereum.request({ method: "eth_accounts" });
             account = accounts[0];
             isConnected = true;
-            status = `Connected to ${account.slice(0, 6)}...${account.slice(-4)} on ${isTestnet ? 'Sepolia' : 'Mainnet'}`;
+            updateStatus();
             
         } catch (error) {
-            const errorMsg = error.code === 4001 ? "Connection cancelled by user" : `Connection failed: ${error.message}`;
-            status = errorMsg;
+            status = error.code === 4001 ? "Connection cancelled by user" : `Connection failed: ${error.message}`;
         }
     }
 
     async function disconnectWallet() {
         try {
-            // Try to revoke permissions (this will force MetaMask to show permission dialog again)
             await window.ethereum.request({
                 method: "wallet_revokePermissions",
                 params: [{ eth_accounts: {} }]
             });
-        } catch (error) {
-            // Ignore errors
-        }
+        } catch {}
         
-        // Clear event listeners to prevent memory leaks
         if (window.ethereum) {
             window.ethereum.removeAllListeners('chainChanged');
             window.ethereum.removeAllListeners('accountsChanged');
@@ -180,28 +149,18 @@
         fileName = fileList[0].name;
 
         try {
-            // Encode function call using minimal viem
-            const data = encodeFunctionData({
-                abi,
-                functionName: "verify",
-                args: [account, hash]
+            const data = encodeFunctionData({abi, functionName: "verify", args: [account, hash]});
+            const result = await window.ethereum.request({method: 'eth_call',
+                params: [{ to: contractAddress, data }, 'latest']
             });
-            
-            // Direct RPC call
-            const result = await window.ethereum.request({
-                method: 'eth_call',
-                params: [{
-                    to: contractAddress,
-                    data: data
-                }, 'latest']
-            });
-
-            // Decode result using minimal viem
-            const timestamp = decodeFunctionResult({
-                abi,
-                functionName: "verify",
-                data: result
-            });
+            if (!result || result == "0x") {
+               status = `Error: Missing contract?`;
+               isDisabled = false;
+               hash = null
+               fileName = null
+               return;
+            }
+            const timestamp = decodeFunctionResult({abi, functionName: "verify", data: result});
 
             if (timestamp.toString() === "0") {
                 isDisabled = false;
@@ -212,31 +171,20 @@
             }
         } catch (error) {
             isDisabled = false;
+            hash = null
+            fileName = null
             status = `Error: ${error.message}`;
         }
     }
 
     async function store() {
         try {
-            // Encode function call
-            const data = encodeFunctionData({
-                abi,
-                functionName: "store",
-                args: [hash]
-            });
-            
-            // Send transaction via MetaMask
-            const txHash = await window.ethereum.request({
-                method: 'eth_sendTransaction',
-                params: [{
-                    from: account,
-                    to: contractAddress,
-                    data: data
-                }]
+            const data = encodeFunctionData({abi, functionName: "store", args: [hash]});
+            const txHash = await window.ethereum.request({method: 'eth_sendTransaction',
+                params: [{ from: account, to: contractAddress, data }]
             });
             
             status = `Stored, tx is: ${txHash}`;
-            
         } catch (error) {
             status = `Error: ${error.message}`;
         }
@@ -248,41 +196,37 @@
     <div class="header">
         <h1>Notarize PDF</h1>
         <div class="wallet-connection">
-            <div class="wallet-section">
-                <div class="network-info">
-                    {#if !isConnected}
-                        <label class="network-checkbox">
-                            <input type="checkbox" bind:checked={isTestnet} />
-                            Use Testnet (Sepolia)
-                        </label>
-                    {:else}
-                        {isTestnet ? "Sepolia Testnet" : "Ethereum Mainnet"}
-                    {/if}
-                </div>
+            <div class="network-info">
                 {#if !isConnected}
-                    <button onclick={connectWallet} class="connect-btn">Connect MetaMask</button>
+                    <label class="network-checkbox">
+                        <input type="checkbox" bind:checked={isTestnet} />
+                        Use Testnet (Sepolia)
+                    </label>
                 {:else}
-                    <button onclick={disconnectWallet} class="connect-btn disconnect">Disconnect</button>
+                    {isTestnet ? "Sepolia Testnet" : "Ethereum Mainnet"}
                 {/if}
             </div>
+            {#if !isConnected}
+                <button onclick={connectWallet} class="connect-btn">Connect MetaMask</button>
+            {:else}
+                <button onclick={disconnectWallet} class="connect-btn disconnect">Disconnect</button>
+            {/if}
         </div>
     </div>
 
     <div class="dropbox" class:disabled={!isConnected}>
-        <div class="dropbox-content">
-            <input type="file" onchange={(e) => filesChange(e.target.files)} class="input-file" disabled={!isConnected} />
-            {#if isConnected}
-                Drag your file(s) here to begin<br /> or click to browse<br />
-            {:else}
-                Connect MetaMask to upload files<br />
-            {/if}
-            {#if hash !== null}
-                <div>SHA256 Hash: <b>{hash}</b></div>
-            {/if}
-            {#if fileName !== null}
-                <div>Name: <b>{fileName}</b></div>
-            {/if}
-        </div>
+        <input type="file" onchange={(e) => filesChange(e.target.files)} class="input-file" disabled={!isConnected} />
+        {#if isConnected}
+            Drag your file(s) here to begin<br /> or click to browse<br />
+        {:else}
+            Connect MetaMask to upload files<br />
+        {/if}
+        {#if hash !== null}
+            <div>SHA256 Hash: <b>{hash}</b></div>
+        {/if}
+        {#if fileName !== null}
+            <div>Name: <b>{fileName}</b></div>
+        {/if}
     </div>
     
     <button onclick={store} disabled={isDisabled || !isConnected} class="notarize-btn">Notarize</button>
@@ -310,9 +254,6 @@
         border-radius: 5px;
         background: #f9f9f9;
         width: 250px;
-    }
-
-    .wallet-section {
         display: flex;
         flex-direction: column;
         gap: 15px;
@@ -330,10 +271,6 @@
         align-items: center;
         gap: 8px;
         cursor: pointer;
-    }
-
-    .network-checkbox input[type="checkbox"] {
-        transform: scale(1.2);
     }
 
     .connect-btn, .notarize-btn {
@@ -359,10 +296,6 @@
         background: #545b62;
     }
 
-    .notarize-btn {
-        margin-bottom: 15px;
-    }
-
     .notarize-btn:disabled {
         background: #ccc;
         cursor: not-allowed;
@@ -373,14 +306,16 @@
         outline-offset: -10px;
         background: lightcyan;
         color: dimgray;
-        min-height: 200px;
+        min-height: 250px;
         position: relative;
         cursor: pointer;
-        transition: all 0.3s ease;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        margin-bottom: 15px;
+        margin-bottom: 20px;
+        text-align: center;
+        padding: 30px;
     }
 
     .dropbox.disabled {
@@ -390,23 +325,15 @@
         outline-color: #ccc;
     }
 
-    .dropbox-content {
-        text-align: center;
-        padding: 20px;
+    .dropbox:hover:not(.disabled) {
+        background: lightblue;
     }
 
     .input-file {
         opacity: 0;
-        width: 100%;
-        height: 100%;
         position: absolute;
-        top: 0;
-        left: 0;
+        inset: 0;
         cursor: pointer;
-    }
-
-    .dropbox:hover:not(.disabled) {
-        background: lightblue;
     }
 
     .status-box {
