@@ -6,8 +6,8 @@
   },
   "dependencies": {
     "fast-text-encoding": "^1.0.6",
-    "svelte": "^5.39.4",
-    "viem": "^2.37.7"
+    "svelte": "^5.39.6",
+    "viem": "^2.37.8"
   },
   "devDependencies": {
     "preveltekit": "1.0.14"
