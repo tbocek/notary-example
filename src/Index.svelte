@@ -7,7 +7,7 @@
         { inputs: [{ internalType: "bytes32", name: "hash", type: "bytes32" }], name: "store", outputs: [], stateMutability: "nonpayable", type: "function" },
         { inputs: [{ internalType: "address", name: "recipient", type: "address" }, { internalType: "bytes32", name: "hash", type: "bytes32" }], name: "verify", outputs: [{ internalType: "uint256", name: "", type: "uint256" }], stateMutability: "view", type: "function" }
     ];
-    const contractAddress = "0x6f4BDa64922e1E45DBDd3403535127408125e6B8";
+    const contractAddress = "0x6f7982aaCF30Cf6825d333049DD53BeD2D3eBE5c";
 
     let account = $state(null);
     let isConnected = $state(false);
@@ -25,20 +25,57 @@
             .map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
+    // Add this function to detect and update network state
+    function updateNetworkState(chainId) {
+        const sepoliaChainId = "0xaa36a7"; // 11155111 in hex
+        const mainnetChainId = "0x1"; // 1 in hex
+        
+        // Normalize chainId to lowercase hex string
+        const normalizedChainId = typeof chainId === 'string' ? chainId.toLowerCase() : `0x${chainId.toString(16)}`;
+        
+        const wasTestnet = isTestnet;
+        isTestnet = normalizedChainId === sepoliaChainId.toLowerCase();
+        
+        return normalizedChainId;
+    }
+
     onMount(async () => {
         if (!window.ethereum) {
             status = "MetaMask not detected. Please install MetaMask.";
             return;
         }
 
+        // Listen for network changes
+        window.ethereum.on('chainChanged', (chainId) => {
+            const normalizedChainId = updateNetworkState(chainId);
+            if (account) {
+                status = `Connected to ${account.slice(0, 6)}...${account.slice(-4)} on ${isTestnet ? 'Sepolia' : 'Mainnet'}`;
+            }
+        });
+
+        // Listen for account changes
+        window.ethereum.on('accountsChanged', (accounts) => {
+            if (accounts.length > 0) {
+                account = accounts[0];
+                status = `Connected to ${account.slice(0, 6)}...${account.slice(-4)} on ${isTestnet ? 'Sepolia' : 'Mainnet'}`;
+            } else {
+                disconnectWallet();
+            }
+        });
+
         try {
             const accounts = await window.ethereum.request({ method: "eth_accounts" });
+            
             if (accounts.length > 0) {
                 account = accounts[0];
                 isConnected = true;
+                
+                // Get current network and update state
                 const chainId = await window.ethereum.request({ method: "eth_chainId" });
-                isTestnet = chainId === "0xaa36a7";
-                status = `Connected to ${account.slice(0, 6)}...${account.slice(-4)}`;
+                
+                const normalizedChainId = updateNetworkState(chainId);
+                
+                status = `Connected to ${account.slice(0, 6)}...${account.slice(-4)} on ${isTestnet ? 'Sepolia' : 'Mainnet'}`;
             }
         } catch (error) {
             console.error("Error checking connection:", error);
@@ -49,16 +86,24 @@
         try {
             await window.ethereum.request({ method: "eth_requestAccounts" });
 
-            // Switch to desired network
-            const chainId = isTestnet ? "0xaa36a7" : "0x1";
-            try {
-                await window.ethereum.request({ 
-                    method: "wallet_switchEthereumChain", 
-                    params: [{ chainId }] 
-                });
-            } catch (switchError) {
-                if (switchError.code === 4902) {
-                    if (isTestnet) {
+            // Get current network first
+            const currentChainId = await window.ethereum.request({ method: "eth_chainId" });
+            
+            const desiredChainId = isTestnet ? "0xaa36a7" : "0x1";
+            
+            // Normalize for comparison
+            const normalizedCurrent = currentChainId.toLowerCase();
+            const normalizedDesired = desiredChainId.toLowerCase();
+            
+            // Only switch if not on desired network
+            if (normalizedCurrent !== normalizedDesired) {
+                try {
+                    await window.ethereum.request({ 
+                        method: "wallet_switchEthereumChain", 
+                        params: [{ chainId: desiredChainId }] 
+                    });
+                } catch (switchError) {
+                    if (switchError.code === 4902 && isTestnet) {
                         await window.ethereum.request({
                             method: 'wallet_addEthereumChain',
                             params: [{
@@ -69,29 +114,60 @@
                                 blockExplorerUrls: ['https://sepolia.etherscan.io']
                             }]
                         });
+                    } else if (switchError.code === 4001) {
+                        // Get the actual current network instead of assuming
+                        const actualChainId = await window.ethereum.request({ method: "eth_chainId" });
+                        
+                        updateNetworkState(actualChainId);
+                        status = "Connected but network switch cancelled";
+                        
+                        const accounts = await window.ethereum.request({ method: "eth_accounts" });
+                        account = accounts[0];
+                        isConnected = true;
+                        return;
                     }
-                } else if (switchError.code === 4001) {
-                    status = "Connected but network switch cancelled";
-                    return;
                 }
             }
 
+            // Update state based on final network
+            const finalChainId = await window.ethereum.request({ method: "eth_chainId" });
+            
+            updateNetworkState(finalChainId);
+            
             const accounts = await window.ethereum.request({ method: "eth_accounts" });
             account = accounts[0];
             isConnected = true;
-            status = `Connected to ${account.slice(0, 6)}...${account.slice(-4)}`;
+            status = `Connected to ${account.slice(0, 6)}...${account.slice(-4)} on ${isTestnet ? 'Sepolia' : 'Mainnet'}`;
+            
         } catch (error) {
-            status = error.code === 4001 ? "Connection cancelled by user" : `Connection failed: ${error.message}`;
+            const errorMsg = error.code === 4001 ? "Connection cancelled by user" : `Connection failed: ${error.message}`;
+            status = errorMsg;
         }
     }
 
     async function disconnectWallet() {
+        try {
+            // Try to revoke permissions (this will force MetaMask to show permission dialog again)
+            await window.ethereum.request({
+                method: "wallet_revokePermissions",
+                params: [{ eth_accounts: {} }]
+            });
+        } catch (error) {
+            // Ignore errors
+        }
+        
+        // Clear event listeners to prevent memory leaks
+        if (window.ethereum) {
+            window.ethereum.removeAllListeners('chainChanged');
+            window.ethereum.removeAllListeners('accountsChanged');
+        }
+        
         account = null;
         isConnected = false;
         hash = null;
         fileName = null;
         isDisabled = true;
-        status = "Disconnected";
+        status = "Choose network and connect MetaMask";
     }
 
     async function filesChange(fileList) {
@@ -121,7 +197,7 @@
             });
 
             // Decode result using minimal viem
-            const [timestamp] = decodeFunctionResult({
+            const timestamp = decodeFunctionResult({
                 abi,
                 functionName: "verify",
                 data: result
@@ -160,6 +236,7 @@
             });
             
             status = `Stored, tx is: ${txHash}`;
+            
         } catch (error) {
             status = `Error: ${error.message}`;
         }
