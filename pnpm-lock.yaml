@@ -12,15 +12,15 @@ importers:
         specifier: ^1.0.6
         version: 1.0.6
       svelte:
-        specifier: ^5.39.6
-        version: 5.39.6
+        specifier: ^5.39.8
+        version: 5.39.8
       viem:
-        specifier: ^2.37.8
-        version: 2.37.8
+        specifier: ^2.37.12
+        version: 2.37.12
     devDependencies:
       preveltekit:
-        specifier: 1.0.14
-        version: 1.0.14(@swc/helpers@0.5.17)(postcss@8.5.6)(svelte@5.39.6)
+        specifier: 1.0.15
+        version: 1.0.15(@swc/helpers@0.5.17)(postcss@8.5.6)(svelte@5.39.8)
 
 packages:
 
@@ -568,8 +568,8 @@ packages:
     resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
     engines: {node: ^10 || ^12 || >=14}
 
-  preveltekit@1.0.14:
-    resolution: {integrity: sha512-42QmhYxQfg6XNsorCxvW89sOxoJtFG7oRq7nVEg2SMD8QTgbscYFLz/WnR+TCIP4ZAfdNagrWHvF8yWFI5Z/BQ==}
+  preveltekit@1.0.15:
+    resolution: {integrity: sha512-ZHkgtzeynUd/Wm7grmtwMeZL8J1/B3KtiO/8JjQuRn1wK0k2WmwJ5htuoRWCKPo4QOJ/YeiGbj5NwGDTKl0iFw==}
     hasBin: true
     peerDependencies:
       svelte: ^5.0.0
@@ -705,8 +705,8 @@ packages:
       typescript:
         optional: true
 
-  svelte@5.39.6:
-    resolution: {integrity: sha512-bOJXmuwLNaoqPCTWO8mPu/fwxI5peGE5Efe7oo6Cakpz/G60vsnVF6mxbGODaxMUFUKEnjm6XOwHEqOht6cbvw==}
+  svelte@5.39.8:
+    resolution: {integrity: sha512-KfZ3hCITdxIXTOvrea4nFZX2o+47HPTChKeocgj9BwJQYqWrviVCcPj4boXHF5yf8+eBKqhHY8xii//XaakKXA==}
     engines: {node: '>=18'}
 
   symbol-tree@3.2.4:
@@ -746,8 +746,8 @@ packages:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
 
-  viem@2.37.8:
-    resolution: {integrity: sha512-mL+5yvCQbRIR6QvngDQMfEiZTfNWfd+/QL5yFaOoYbpH3b1Q2ddwF7YG2eI2AcYSh9LE1gtUkbzZLFUAVyj4oQ==}
+  viem@2.37.12:
+    resolution: {integrity: sha512-87lIfGNrAxrfxuM3TCxRET8cj5LvrLZABwJuilHGvijIrPZHZVFv3alquaRx0vvrfSP4QeIcnV/QaO/w2iXbsQ==}
     peerDependencies:
       typescript: '>=5.0.4'
     peerDependenciesMeta:
@@ -927,11 +927,11 @@ snapshots:
       core-js: 3.45.1
       jiti: 2.6.0
 
-  '@rsbuild/plugin-svelte@1.0.11(@rsbuild/core@1.5.11)(postcss@8.5.6)(svelte@5.39.6)':
+  '@rsbuild/plugin-svelte@1.0.11(@rsbuild/core@1.5.11)(postcss@8.5.6)(svelte@5.39.8)':
     dependencies:
       '@rsbuild/core': 1.5.11
-      svelte-loader: 3.2.4(svelte@5.39.6)
-      svelte-preprocess: 6.0.3(postcss@8.5.6)(svelte@5.39.6)
+      svelte-loader: 3.2.4(svelte@5.39.8)
+      svelte-preprocess: 6.0.3(postcss@8.5.6)(svelte@5.39.8)
     transitivePeerDependencies:
       - '@babel/core'
       - coffeescript
@@ -1381,14 +1381,14 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  preveltekit@1.0.14(@swc/helpers@0.5.17)(postcss@8.5.6)(svelte@5.39.6):
+  preveltekit@1.0.15(@swc/helpers@0.5.17)(postcss@8.5.6)(svelte@5.39.8):
     dependencies:
       '@rsbuild/core': 1.5.11
-      '@rsbuild/plugin-svelte': 1.0.11(@rsbuild/core@1.5.11)(postcss@8.5.6)(svelte@5.39.6)
+      '@rsbuild/plugin-svelte': 1.0.11(@rsbuild/core@1.5.11)(postcss@8.5.6)(svelte@5.39.8)
       '@rspack/core': 1.5.6(@swc/helpers@0.5.17)
       express: 5.1.0
       jsdom: 27.0.0(postcss@8.5.6)
-      svelte: 5.39.6
+      svelte: 5.39.8
     transitivePeerDependencies:
       - '@babel/core'
       - '@swc/helpers'
@@ -1511,24 +1511,24 @@ snapshots:
 
   svelte-dev-helper@1.1.9: {}
 
-  svelte-hmr@0.14.12(svelte@5.39.6):
+  svelte-hmr@0.14.12(svelte@5.39.8):
     dependencies:
-      svelte: 5.39.6
+      svelte: 5.39.8
 
-  svelte-loader@3.2.4(svelte@5.39.6):
+  svelte-loader@3.2.4(svelte@5.39.8):
     dependencies:
       loader-utils: 2.0.4
-      svelte: 5.39.6
+      svelte: 5.39.8
       svelte-dev-helper: 1.1.9
-      svelte-hmr: 0.14.12(svelte@5.39.6)
+      svelte-hmr: 0.14.12(svelte@5.39.8)
 
-  svelte-preprocess@6.0.3(postcss@8.5.6)(svelte@5.39.6):
+  svelte-preprocess@6.0.3(postcss@8.5.6)(svelte@5.39.8):
     dependencies:
-      svelte: 5.39.6
+      svelte: 5.39.8
     optionalDependencies:
       postcss: 8.5.6
 
-  svelte@5.39.6:
+  svelte@5.39.8:
     dependencies:
       '@jridgewell/remapping': 2.3.5
       '@jridgewell/sourcemap-codec': 1.5.5
@@ -1575,7 +1575,7 @@ snapshots:
 
   vary@1.1.2: {}
 
-  viem@2.37.8:
+  viem@2.37.12:
     dependencies:
       '@noble/curves': 1.9.1
       '@noble/hashes': 1.8.0
