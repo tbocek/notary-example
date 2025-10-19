@@ -9,6 +9,6 @@
     "viem": "^2.37.12"
   },
   "devDependencies": {
-    "preveltekit": "1.2.4"
+    "preveltekit": "1.2.5"
   }
 }

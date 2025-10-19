@@ -16,8 +16,8 @@ importers:
         version: 2.37.12
     devDependencies:
       preveltekit:
-        specifier: 1.2.4
-        version: 1.2.4(@swc/helpers@0.5.17)(postcss@8.5.6)(svelte@5.39.8)
+        specifier: 1.2.5
+        version: 1.2.5(@swc/helpers@0.5.17)(postcss@8.5.6)(svelte@5.39.8)
 
 packages:
 
@@ -562,8 +562,8 @@ packages:
     resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
     engines: {node: ^10 || ^12 || >=14}
 
-  preveltekit@1.2.4:
-    resolution: {integrity: sha512-32mYq5Dl/6ONz9B06Yw04zgIjdqZqPQnhIsbQSgpOHcLlmOzvKbVIwYoa8LNDydvOIwfXANG78p9YPtB6d77ag==}
+  preveltekit@1.2.5:
+    resolution: {integrity: sha512-BwNihw8+H6bVlhYiDbGwJhVodJJSZKhCMU53v4/c4AIiCbU+OsvpNM96+wJeAf4OUBYwZHFGCREeBecZpwj1Lg==}
     hasBin: true
     peerDependencies:
       svelte: ^5.0.0
@@ -1373,7 +1373,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  preveltekit@1.2.4(@swc/helpers@0.5.17)(postcss@8.5.6)(svelte@5.39.8):
+  preveltekit@1.2.5(@swc/helpers@0.5.17)(postcss@8.5.6)(svelte@5.39.8):
     dependencies:
       '@rsbuild/core': 1.5.17
       '@rsbuild/plugin-svelte': 1.0.11(@rsbuild/core@1.5.17)(postcss@8.5.6)(svelte@5.39.8)
