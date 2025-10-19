@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      fast-text-encoding:
-        specifier: ^1.0.6
-        version: 1.0.6
       svelte:
         specifier: ^5.39.8
         version: 5.39.8
@@ -19,8 +16,8 @@ importers:
         version: 2.37.12
     devDependencies:
       preveltekit:
-        specifier: 1.2.2
-        version: 1.2.2(@swc/helpers@0.5.17)(postcss@8.5.6)(svelte@5.39.8)
+        specifier: 1.2.4
+        version: 1.2.4(@swc/helpers@0.5.17)(postcss@8.5.6)(svelte@5.39.8)
 
 packages:
 
@@ -382,9 +379,6 @@ packages:
     resolution: {integrity: sha512-DT9ck5YIRU+8GYzzU5kT3eHGA5iL+1Zd0EutOmTE9Dtk+Tvuzd23VBU+ec7HPNSTxXYO55gPV/hq4pSBJDjFpA==}
     engines: {node: '>= 18'}
 
-  fast-text-encoding@1.0.6:
-    resolution: {integrity: sha512-VhXlQgj9ioXCqGstD37E/HBeqEGV/qOD/kmbVG8h5xKBYvM1L3lR1Zn4555cQ8GkYbJa8aJSipLPndE1k6zK2w==}
-
   finalhandler@2.1.0:
     resolution: {integrity: sha512-/t88Ty3d5JWQbWYgaOGCCYfXRwV1+be02WqYYlL6h0lEiUAMPM8o8qKGO01YIkOHzka2up08wvgYD0mDiI+q3Q==}
     engines: {node: '>= 0.8'}
@@ -568,8 +562,8 @@ packages:
     resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
     engines: {node: ^10 || ^12 || >=14}
 
-  preveltekit@1.2.2:
-    resolution: {integrity: sha512-1FN9Uj/iWFHhjjNNYYdwZqOYvDWr1JJ+nfV+8xSRxFRhFRyaPoq2Z1brLweloJJ+0BGVG27DJKL0p9D411t1rw==}
+  preveltekit@1.2.4:
+    resolution: {integrity: sha512-32mYq5Dl/6ONz9B06Yw04zgIjdqZqPQnhIsbQSgpOHcLlmOzvKbVIwYoa8LNDydvOIwfXANG78p9YPtB6d77ag==}
     hasBin: true
     peerDependencies:
       svelte: ^5.0.0
@@ -1181,8 +1175,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  fast-text-encoding@1.0.6: {}
-
   finalhandler@2.1.0:
     dependencies:
       debug: 4.4.3
@@ -1381,7 +1373,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  preveltekit@1.2.2(@swc/helpers@0.5.17)(postcss@8.5.6)(svelte@5.39.8):
+  preveltekit@1.2.4(@swc/helpers@0.5.17)(postcss@8.5.6)(svelte@5.39.8):
     dependencies:
       '@rsbuild/core': 1.5.17
       '@rsbuild/plugin-svelte': 1.0.11(@rsbuild/core@1.5.17)(postcss@8.5.6)(svelte@5.39.8)

@@ -1,5 +1,4 @@
 <script>
-    import "fast-text-encoding";
     import { onMount } from "svelte";
     import { encodeFunctionData, decodeFunctionResult } from "viem";
     import { getUserOperationHash } from "viem/account-abstraction";

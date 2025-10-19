@@ -5,11 +5,10 @@
     "stage": "NODE_ENV=production preveltekit stage"
   },
   "dependencies": {
-    "fast-text-encoding": "^1.0.6",
     "svelte": "^5.39.8",
     "viem": "^2.37.12"
   },
   "devDependencies": {
-    "preveltekit": "1.2.2"
+    "preveltekit": "1.2.4"
   }
 }
