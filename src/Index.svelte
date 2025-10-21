@@ -129,6 +129,7 @@
                 const txHash = await sendContractTx(walletConnection.wallet, account, contractAddress, abi, "store", [hash]);
                 status = `Stored, tx is: ${txHash}`;
             }
+            isVerified = true;
         } catch (error) {
             status = `Error: ${error.message}`;
         }
@@ -187,7 +188,7 @@
                 <span>Smart Account (optional):</span>
                 <input type="text" bind:value={smartAccountAddress} placeholder="0x..." class="address-input" />
             </label>
-            <button onclick={store} disabled={isDisabled || !isConnected} class="btn btn-primary">Notarize</button>
+            <button onclick={store} disabled={isDisabled} class="btn btn-primary">Notarize</button>
             <button onclick={() => walletConnection.disconnect()} class="btn btn-secondary">Disconnect</button>
         {/if}
     </div>
