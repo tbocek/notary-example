@@ -1,13 +1,12 @@
 <script>
     import { onMount } from "svelte";
-    import { encodeFunctionData, decodeFunctionResult } from "viem";
-    import { getUserOperationHash } from "viem/account-abstraction";
+    import { createWalletConnection, callContractFunction, sendContractTx } from "./wallet.js";
+    import { executeSmartAccountTransaction } from "./aa.js";
+    import { setupStaticRoutes } from "preveltekit";
 
     const abi = [
         {
-            inputs: [
-                { internalType: "bytes32", name: "hash", type: "bytes32" },
-            ],
+            inputs: [{ internalType: "bytes32", name: "hash", type: "bytes32" }],
             name: "store",
             outputs: [],
             stateMutability: "nonpayable",
@@ -25,27 +24,8 @@
         },
     ];
     const contractAddress = "0x6f7982aaCF30Cf6825d333049DD53BeD2D3eBE5c";
-    const entrypointAddress = "0x0000000071727De22E5E9d8BAf0edAc6f37da032";
 
-    const smartAccountAbi = [
-        {
-            name: "execute",
-            type: "function",
-            inputs: [
-                { type: "address", name: "dest" },
-                { type: "uint256", name: "value" },
-                { type: "bytes", name: "func" },
-            ],
-        },
-        {
-            name: "nonce",
-            type: "function",
-            inputs: [],
-            outputs: [{ type: "uint256" }],
-            stateMutability: "view",
-        },
-    ];
-
+    let walletConnection;
     let account = $state(null);
     let isConnected = $state(false);
     let isTestnet = $state(false);
@@ -66,147 +46,43 @@
         );
     }
 
-    function updateNetworkState(chainId) {
-        const normalizedChainId =
-            typeof chainId === "string"
-                ? chainId.toLowerCase()
-                : `0x${chainId.toString(16)}`;
-        isTestnet = normalizedChainId === "0xaa36a7";
-        return normalizedChainId;
-    }
-
-    function updateStatus() {
-        if (account) {
-            status = `Connected to ${account.slice(0, 6)}...${account.slice(-4)} on ${isTestnet ? "Sepolia" : "Mainnet"}`;
-        }
-    }
-
-    onMount(async () => {
-        if (!window.ethereum) {
-            status = "MetaMask not detected. Please install MetaMask.";
-            return;
-        }
-
-        window.ethereum.on("chainChanged", (chainId) => {
-            updateNetworkState(chainId);
-            updateStatus();
-        });
-
-        window.ethereum.on("accountsChanged", (accounts) => {
-            if (accounts.length > 0) {
-                account = accounts[0];
-                updateStatus();
-            } else {
-                disconnectWallet();
-            }
-        });
-
-        try {
-            const accounts = await window.ethereum.request({
-                method: "eth_accounts",
-            });
-            if (accounts.length > 0) {
-                account = accounts[0];
+    onMount(() => {
+        walletConnection = createWalletConnection({
+            onConnected: (acc, testnet, switchCancelled = false) => {
+                account = acc;
                 isConnected = true;
-                const chainId = await window.ethereum.request({
-                    method: "eth_chainId",
-                });
-                updateNetworkState(chainId);
-                updateStatus();
-            }
-        } catch (error) {
-            console.error("Error checking connection:", error);
-        }
-    });
-
-    async function connectWallet() {
-        try {
-            await window.ethereum.request({ method: "eth_requestAccounts" });
-            const currentChainId = await window.ethereum.request({
-                method: "eth_chainId",
-            });
-            const desiredChainId = isTestnet ? "0xaa36a7" : "0x1";
-
-            if (currentChainId.toLowerCase() !== desiredChainId.toLowerCase()) {
-                try {
-                    await window.ethereum.request({
-                        method: "wallet_switchEthereumChain",
-                        params: [{ chainId: desiredChainId }],
-                    });
-                } catch (switchError) {
-                    if (switchError.code === 4902 && isTestnet) {
-                        await window.ethereum.request({
-                            method: "wallet_addEthereumChain",
-                            params: [
-                                {
-                                    chainId: "0xaa36a7",
-                                    chainName: "Sepolia",
-                                    nativeCurrency: {
-                                        name: "ETH",
-                                        symbol: "ETH",
-                                        decimals: 18,
-                                    },
-                                    rpcUrls: ["https://rpc.sepolia.org"],
-                                    blockExplorerUrls: [
-                                        "https://sepolia.etherscan.io",
-                                    ],
-                                },
-                            ],
-                        });
-                    } else if (switchError.code === 4001) {
-                        const actualChainId = await window.ethereum.request({
-                            method: "eth_chainId",
-                        });
-                        updateNetworkState(actualChainId);
-                        status = "Connected but network switch cancelled";
-                        const accounts = await window.ethereum.request({
-                            method: "eth_accounts",
-                        });
-                        account = accounts[0];
-                        isConnected = true;
-                        return;
-                    }
+                isTestnet = testnet;
+                status = switchCancelled
+                    ? "Connected but network switch cancelled"
+                    : `Connected to ${acc.slice(0, 6)}...${acc.slice(-4)} on ${testnet ? "Sepolia" : "Mainnet"}`;
+            },
+            onDisconnected: () => {
+                account = null;
+                isConnected = false;
+                hash = null;
+                fileName = null;
+                isDisabled = true;
+                status = "Choose network and connect MetaMask";
+            },
+            onChainChanged: (testnet) => {
+                isTestnet = testnet;
+                if (account) {
+                    status = `Connected to ${account.slice(0, 6)}...${account.slice(-4)} on ${testnet ? "Sepolia" : "Mainnet"}`;
                 }
-            }
+            },
+            onAccountChanged: (acc) => {
+                account = acc;
+                if (acc) {
+                    status = `Connected to ${acc.slice(0, 6)}...${acc.slice(-4)} on ${isTestnet ? "Sepolia" : "Mainnet"}`;
+                }
+            },
+            onError: (message) => {
+                status = message;
+            },
+        });
 
-            const finalChainId = await window.ethereum.request({
-                method: "eth_chainId",
-            });
-            updateNetworkState(finalChainId);
-            const accounts = await window.ethereum.request({
-                method: "eth_accounts",
-            });
-            account = accounts[0];
-            isConnected = true;
-            updateStatus();
-        } catch (error) {
-            status =
-                error.code === 4001
-                    ? "Connection cancelled by user"
-                    : `Connection failed: ${error.message}`;
-        }
-    }
-
-    async function disconnectWallet() {
-        try {
-            await window.ethereum.request({
-                method: "wallet_revokePermissions",
-                params: [{ eth_accounts: {} }],
-            });
-        } catch {}
-
-        if (window.ethereum) {
-            window.ethereum.removeAllListeners("chainChanged");
-            window.ethereum.removeAllListeners("accountsChanged");
-        }
-
-        account = null;
-        isConnected = false;
-        hash = null;
-        fileName = null;
-        isDisabled = true;
-        status = "Choose network and connect MetaMask";
-    }
+        walletConnection.initialize();
+    });
 
     async function filesChange(fileList) {
         if (!isConnected) {
@@ -222,27 +98,11 @@
             if (smartAccountAddress && smartAccountAddress !== "") {
                 addr = smartAccountAddress;
             }
-            const data = encodeFunctionData({
-                abi,
-                functionName: "verify",
-                args: [addr, hash],
-            });
-            const result = await window.ethereum.request({
-                method: "eth_call",
-                params: [{ to: contractAddress, data }, "latest"],
-            });
-            if (!result || result == "0x") {
-                status = `Error: Missing contract?`;
-                isDisabled = false;
-                hash = null;
-                fileName = null;
-                return;
-            }
-            const timestamp = decodeFunctionResult({
-                abi,
-                functionName: "verify",
-                data: result,
-            });
+
+            const timestamp = await callContractFunction(walletConnection.wallet, contractAddress, abi, "verify", [
+                addr,
+                hash,
+            ]);
 
             if (timestamp.toString() === "0") {
                 isDisabled = false;
@@ -262,131 +122,16 @@
     async function store() {
         if (smartAccountAddress && smartAccountAddress !== "") {
             try {
-                // Check if smart account has ETH for gas fees
-                const balance = await window.ethereum.request({
-                    method: "eth_getBalance",
-                    params: [smartAccountAddress, "latest"],
-                });
-                const balanceInWei = BigInt(balance);
-                if (balanceInWei === 0n) {
-                    status = `Error: Smart account ${smartAccountAddress} has no funds`;
-                    isDisabled = true;
-                    return;
-                }
-
-                // Get current nonce from smart account contract
-                const nonceData = encodeFunctionData({
-                    abi: smartAccountAbi,
-                    functionName: "nonce",
-                    args: [],
-                });
-                const nonceResult = await window.ethereum.request({
-                    method: "eth_call",
-                    params: [
-                        { to: smartAccountAddress, data: nonceData },
-                        "latest",
-                    ],
-                });
-                const nonce = decodeFunctionResult({
-                    abi: smartAccountAbi,
-                    functionName: "nonce",
-                    data: nonceResult,
-                });
-
-                // Build callData: smart account executes store(hash) on notarization contract
-                const storeCallData = encodeFunctionData({
+                const userOpHash = await executeSmartAccountTransaction(
+                    walletConnection.wallet,
+                    smartAccountAddress,
+                    account,
+                    contractAddress,
                     abi,
-                    functionName: "store",
-                    args: [hash],
-                });
-                const callData = encodeFunctionData({
-                    abi: smartAccountAbi,
-                    functionName: "execute",
-                    args: [contractAddress, 0n, storeCallData],
-                });
-
-                // Get network gas prices
-                const feeHistory = await window.ethereum.request({
-                    method: "eth_feeHistory",
-                    params: ["0x1", "latest", [50]],
-                });
-                const baseFee = BigInt(feeHistory.baseFeePerGas[0]);
-                const priorityFee = BigInt(feeHistory.reward[0][0]);
-
-                // Apply bundler minimums
-                const minPriorityFee = 100000000n; // 0.1 gwei minimum for priority
-                const minMaxFee = 100000025n; // bundler minimum for maxFee
-
-                const actualPriorityFee =
-                    priorityFee > minPriorityFee ? priorityFee : minPriorityFee;
-                const actualMaxFee =
-                    baseFee + actualPriorityFee > minMaxFee
-                        ? baseFee + actualPriorityFee
-                        : minMaxFee;
-
-                const chainId = await window.ethereum.request({
-                    method: "eth_chainId",
-                });
-
-                // Calculate UserOperation hash for signing (EIP-712 format for v0.7)
-                const userOpHash = getUserOperationHash({
-                    chainId: Number(chainId),
-                    entryPointAddress: entrypointAddress,
-                    entryPointVersion: "0.7",
-                    userOperation: {
-                        sender: smartAccountAddress,
-                        nonce: BigInt(nonce),
-                        callData: callData,
-                        callGasLimit: BigInt("0x70000"),
-                        verificationGasLimit: BigInt("0x20000"),
-                        preVerificationGas: BigInt("0x10000"),
-                        maxFeePerGas: BigInt(actualMaxFee),
-                        maxPriorityFeePerGas: BigInt(actualPriorityFee),
-                    },
-                });
-
-                // Sign the UserOperation hash with EOA
-                const signature = await window.ethereum.request({
-                    method: "personal_sign",
-                    params: [userOpHash, account],
-                });
-
-                // Build final UserOperation with hex string values for bundler
-                const userOp = {
-                    sender: smartAccountAddress,
-                    nonce: "0x" + nonce.toString(16),
-                    callData: callData,
-                    callGasLimit: "0x70000",
-                    verificationGasLimit: "0x20000",
-                    preVerificationGas: "0x10000",
-                    maxFeePerGas: "0x" + actualMaxFee.toString(16),
-                    maxPriorityFeePerGas: "0x" + actualPriorityFee.toString(16),
-                    signature: signature,
-                };
-
-                // Send UserOperation to bundler
-                //const bundlerUrl =
-                //    "https://eth-sepolia.g.alchemy.com/v2/API-KEY";
-                const bundlerUrl = 'https://public.pimlico.io/v2/11155111/rpc'
-                const response = await fetch(bundlerUrl, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        jsonrpc: "2.0",
-                        id: 1,
-                        method: "eth_sendUserOperation",
-                        params: [userOp, entrypointAddress],
-                    }),
-                });
-
-                const result = await response.json();
-
-                if (result.error) {
-                    status = `Bundler error: ${result.error.message}`;
-                } else {
-                    status = `UserOp submitted: ${result.result}`;
-                }
-                
+                    "store",
+                    [hash]
+                );
+                status = `UserOp submitted: ${userOpHash}`;
             } catch (error) {
                 status = `Error: ${error.message}`;
             }
@@ -395,15 +140,9 @@
         }
 
         try {
-            const data = encodeFunctionData({
-                abi,
-                functionName: "store",
-                args: [hash],
-            });
-            const txHash = await window.ethereum.request({
-                method: "eth_sendTransaction",
-                params: [{ from: account, to: contractAddress, data }],
-            });
+            const txHash = await sendContractTx(walletConnection.wallet, account, contractAddress, abi, "store", [
+                hash,
+            ]);
 
             status = `Stored, tx is: ${txHash}`;
         } catch (error) {
@@ -411,148 +150,89 @@
         }
         isDisabled = true;
     }
+
+    const routes = {
+        staticRoutes: [
+            {
+                path: "/",
+                htmlFilename: "index.html",
+            },
+        ],
+    };
+    setupStaticRoutes(routes);
 </script>
 
-<div>
-    <div class="header">
-        <h1>Notarize PDF</h1>
-        <div class="wallet-connection">
-            <div class="network-info">
-                {#if !isConnected}
-                    <label class="network-checkbox">
-                        <input type="checkbox" bind:checked={isTestnet} />
-                        Use Testnet (Sepolia)
-                    </label>
-                {:else}
-                    {isTestnet ? "Sepolia Testnet" : "Ethereum Mainnet"}
-                {/if}
-            </div>
-            {#if !isConnected}
-                <button onclick={connectWallet} class="connect-btn"
-                    >Connect MetaMask</button
-                >
-            {:else}
-                <button
-                    onclick={disconnectWallet}
-                    class="connect-btn disconnect">Disconnect</button
-                >
-                <label class="smart-account-label">
-                    Smart Account Address:
-                    <input
-                        type="text"
-                        bind:value={smartAccountAddress}
-                        placeholder="0x..."
-                        class="smart-account-input"
-                    />
-                </label>
-            {/if}
-        </div>
-    </div>
+<div class="container">
+    <h1>Notarize PDF</h1>
 
     <div class="dropbox" class:disabled={!isConnected}>
-        <input
-            type="file"
-            onchange={(e) => filesChange(e.target.files)}
-            class="input-file"
-            disabled={!isConnected}
-        />
+        <input type="file" onchange={(e) => filesChange(e.target.files)} class="input-file" disabled={!isConnected} />
         {#if isConnected}
-            Drag your file(s) here to begin<br /> or click to browse<br />
+            Drag your file here or click to browse
         {:else}
-            Connect MetaMask to upload files<br />
+            Connect MetaMask to upload files
         {/if}
         {#if hash !== null}
-            <div>SHA256 Hash: <b>{hash}</b></div>
-        {/if}
-        {#if fileName !== null}
-            <div>Name: <b>{fileName}</b></div>
+            <div class="file-info">
+                <div>
+                    <strong>File:</strong>
+                    {fileName}
+                </div>
+                <div>
+                    <strong>SHA256:</strong>
+                    {hash}
+                </div>
+            </div>
         {/if}
     </div>
-
-    <button
-        onclick={store}
-        disabled={isDisabled || !isConnected}
-        class="notarize-btn">Notarize</button
-    >
 
     <div class="status-box">
         <span>{@html status.replace(/\n/g, "<br>")}</span>
     </div>
+
+    <div class="controls">
+        {#if !isConnected}
+            <label class="network-toggle">
+                <input type="checkbox" bind:checked={isTestnet} />
+                <span>Use Testnet (Sepolia)</span>
+            </label>
+            <button onclick={() => walletConnection.connect(isTestnet)} class="btn btn-connect">
+                Connect MetaMask
+            </button>
+        {:else}
+            <label class="input-group">
+                <span>Smart Account (optional):</span>
+                <input type="text" bind:value={smartAccountAddress} placeholder="0x..." class="address-input" />
+            </label>
+            <button onclick={store} disabled={isDisabled || !isConnected} class="btn btn-primary">Notarize</button>
+            <button onclick={() => walletConnection.disconnect()} class="btn btn-secondary">Disconnect</button>
+        {/if}
+    </div>
 </div>
 
 <style>
-    .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
+    .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 40px 20px;
+        font-family:
+            system-ui,
+            -apple-system,
+            sans-serif;
     }
 
-    .header h1 {
-        margin: 0;
-    }
-
-    .wallet-connection {
-        padding: 15px;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        background: #f9f9f9;
-        width: 250px;
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-    }
-
-    .network-info {
-        font-weight: 500;
-        font-size: 14px;
-        color: #333;
-        min-height: 24px;
-    }
-
-    .network-checkbox {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-    }
-
-    .connect-btn,
-    .notarize-btn {
-        background: #f6851b;
-        color: white;
-        border: none;
-        padding: 12px 20px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 16px;
-        font-weight: 500;
-    }
-
-    .connect-btn:hover,
-    .notarize-btn:hover:not(:disabled) {
-        background: #e2761b;
-    }
-
-    .connect-btn.disconnect {
-        background: #6c757d;
-    }
-
-    .connect-btn.disconnect:hover {
-        background: #545b62;
-    }
-
-    .notarize-btn:disabled {
-        background: #ccc;
-        cursor: not-allowed;
+    h1 {
+        font-size: 28px;
+        margin: 0 0 30px 0;
+        color: #1a1a1a;
     }
 
     .dropbox {
-        outline: 2px dashed grey;
-        outline-offset: -10px;
-        background: lightcyan;
-        color: dimgray;
-        min-height: 250px;
+        border: 2px dashed #ccc;
+        border-radius: 8px;
+        background: #fafafa;
+        color: #666;
+        min-height: 200px;
         position: relative;
         cursor: pointer;
         display: flex;
@@ -560,19 +240,21 @@
         align-items: center;
         justify-content: center;
         margin-bottom: 20px;
+        padding: 40px;
         text-align: center;
-        padding: 30px;
+        transition: all 0.2s;
+    }
+
+    .dropbox:hover:not(.disabled) {
+        border-color: #999;
+        background: #f0f0f0;
     }
 
     .dropbox.disabled {
         background: #f5f5f5;
         color: #ccc;
         cursor: not-allowed;
-        outline-color: #ccc;
-    }
-
-    .dropbox:hover:not(.disabled) {
-        background: lightblue;
+        border-color: #e0e0e0;
     }
 
     .input-file {
@@ -582,13 +264,114 @@
         cursor: pointer;
     }
 
+    .file-info {
+        margin-top: 20px;
+        padding: 15px;
+        background: white;
+        border-radius: 6px;
+        text-align: left;
+        width: 100%;
+        max-width: 600px;
+        font-size: 13px;
+        word-break: break-all;
+    }
+
+    .file-info div {
+        margin: 5px 0;
+    }
+
     .status-box {
-        padding: 12px 20px;
+        padding: 15px 20px;
         border: 1px solid #ddd;
-        border-radius: 5px;
-        background: #f9f9f9;
+        border-radius: 6px;
+        background: #fff;
         font-size: 14px;
         color: #333;
+        min-height: 50px;
+        margin-bottom: 30px;
+    }
+
+    .controls {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .network-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        margin-right: auto;
+    }
+
+    .network-toggle input {
+        cursor: pointer;
+    }
+
+    .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 13px;
+        flex: 1;
+        min-width: 250px;
+    }
+
+    .input-group span {
         font-weight: 500;
+        color: #555;
+    }
+
+    .address-input {
+        padding: 10px 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 13px;
+        font-family: monospace;
+    }
+
+    .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+
+    .btn-connect {
+        background: #f6851b;
+        color: white;
+    }
+
+    .btn-connect:hover {
+        background: #e2761b;
+    }
+
+    .btn-primary {
+        background: #f6851b;
+        color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+        background: #e2761b;
+    }
+
+    .btn-primary:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+
+    .btn-secondary {
+        background: #6c757d;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #545b62;
     }
 </style>
