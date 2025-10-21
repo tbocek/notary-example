@@ -31,8 +31,9 @@
     let isTestnet = $state(false);
     let hash = $state(null);
     let status = $state("Choose network and connect MetaMask");
-    let isDisabled = $state(true);
     let fileName = $state(null);
+    let isVerified = $state(false);
+    let isDisabled = $derived(!hash || !isConnected || isVerified);
     let smartAccountAddress = $state("");
 
     async function hashFile(file) {
@@ -61,7 +62,7 @@
                 isConnected = false;
                 hash = null;
                 fileName = null;
-                isDisabled = true;
+                isVerified = false;
                 status = "Choose network and connect MetaMask";
             },
             onChainChanged: (testnet) => {
@@ -89,30 +90,22 @@
             status = "Please connect MetaMask first";
             return;
         }
-
+    
         hash = await hashFile(fileList[0]);
         fileName = fileList[0].name;
-
+        isVerified = false; // Reset verification state
+    
         try {
-            let addr = account;
-            if (smartAccountAddress && smartAccountAddress !== "") {
-                addr = smartAccountAddress;
-            }
-
-            const timestamp = await callContractFunction(walletConnection.wallet, contractAddress, abi, "verify", [
-                addr,
-                hash,
-            ]);
-
+            const addr = smartAccountAddress || account;
+            const timestamp = await callContractFunction(walletConnection.wallet, contractAddress, abi, "verify", [addr, hash]);
+    
             if (timestamp.toString() === "0") {
-                isDisabled = false;
                 status = `Not yet stored from account: ${addr}`;
             } else {
-                isDisabled = true;
+                isVerified = true;
                 status = `<b>VERIFIED</b> in the blockchain! Timestamp: ${timestamp.toString()}`;
             }
         } catch (error) {
-            isDisabled = false;
             hash = null;
             fileName = null;
             status = `Error: ${error.message}`;
@@ -120,8 +113,8 @@
     }
 
     async function store() {
-        if (smartAccountAddress && smartAccountAddress !== "") {
-            try {
+        try {
+            if (smartAccountAddress) {
                 const userOpHash = await executeSmartAccountTransaction(
                     walletConnection.wallet,
                     smartAccountAddress,
@@ -132,23 +125,13 @@
                     [hash]
                 );
                 status = `UserOp submitted: ${userOpHash}`;
-            } catch (error) {
-                status = `Error: ${error.message}`;
+            } else {
+                const txHash = await sendContractTx(walletConnection.wallet, account, contractAddress, abi, "store", [hash]);
+                status = `Stored, tx is: ${txHash}`;
             }
-            isDisabled = true;
-            return;
-        }
-
-        try {
-            const txHash = await sendContractTx(walletConnection.wallet, account, contractAddress, abi, "store", [
-                hash,
-            ]);
-
-            status = `Stored, tx is: ${txHash}`;
         } catch (error) {
             status = `Error: ${error.message}`;
         }
-        isDisabled = true;
     }
 
     const routes = {
