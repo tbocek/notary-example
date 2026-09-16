@@ -1,7 +1,7 @@
 import { createWalletClient, custom, publicActions, parseAbi, sha256 } from "https://esm.sh/viem@2.56.5";
 import { sepolia } from "https://esm.sh/viem@2.56.5/chains";
 
-const contractAddress = "0x6f7982aaCF30Cf6825d333049DD53BeD2D3eBE5c";
+const contractAddress = "0xe63369b050548f351a141a8c2a4621aae9cd32f3";
 const abi = parseAbi([
     "function store(bytes32 hash)",
     "function verify(address recipient, bytes32 hash) view returns (uint256)",
