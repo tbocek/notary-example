@@ -1,0 +1,103 @@
+body {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    font-family: system-ui, sans-serif;
+    color: #333;
+}
+
+h1 {
+    font-size: 28px;
+    margin: 0 0 30px;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+#dropbox {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+    padding: 40px;
+    margin-bottom: 20px;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    background: #fafafa;
+    color: #666;
+    text-align: center;
+}
+
+#dropbox:hover {
+    border-color: #999;
+}
+
+#dropbox:has(input:disabled) {
+    color: #ccc;
+    border-color: #e0e0e0;
+}
+
+#file-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+}
+
+#file-input:disabled {
+    cursor: not-allowed;
+}
+
+#file-info {
+    width: 100%;
+    max-width: 600px;
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 6px;
+    background: #fff;
+    text-align: left;
+    font-size: 13px;
+    word-break: break-all;
+}
+
+#status-box {
+    min-height: 50px;
+    padding: 15px 20px;
+    margin-bottom: 30px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.controls {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+    filter: brightness(0.92);
+}
+
+button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.secondary {
+    background: #6c757d;
+}

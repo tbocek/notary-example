@@ -1,14 +1,47 @@
 <!doctype html>
 <html lang="en">
     <head>
-        <title>Notarization with Smart Accounts</title>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Notarize PDF</title>
         <link
             rel="icon"
-            href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23f6851b' d='M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z'/></svg>"
+            href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%232563eb' d='M3 17.25V21h3.75L17.81 9.94l-3.75-3.75zM20.71 7.04a.996.996 0 0 0 0-1.41l-2.34-2.34a.996.996 0 0 0-1.41 0l-1.83 1.83 3.75 3.75z'/></svg>"
             type="image/svg+xml"
         />
+        <link rel="stylesheet" href="index.css" />
     </head>
     <body>
-        <div id="root"></div>
+        <h1>Notarize PDF</h1>
+
+        <div id="dropbox">
+            <input id="file-input" type="file" disabled />
+            <span id="dropbox-text">Connect MetaMask to upload files</span>
+            <div id="file-info" hidden>
+                <div>
+                    <strong>File:</strong>
+                    <span id="file-name"></span>
+                </div>
+                <div>
+                    <strong>SHA256:</strong>
+                    <span id="file-hash"></span>
+                </div>
+            </div>
+        </div>
+
+        <div id="status-box">
+            <span id="status">Connect MetaMask</span>
+        </div>
+
+        <div id="controls-disconnected" class="controls">
+            <button id="connect-btn">Connect MetaMask (Sepolia)</button>
+        </div>
+
+        <div id="controls-connected" class="controls" hidden>
+            <button id="notarize-btn" disabled>Notarize</button>
+            <button id="disconnect-btn" class="secondary">Disconnect</button>
+        </div>
+
+        <script type="module" src="index.js"></script>
     </body>
 </html>

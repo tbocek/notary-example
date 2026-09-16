@@ -6,9 +6,5 @@
   "singleQuote": false,
   "trailingComma": "es5",
   "bracketSpacing": true,
-  "htmlWhitespaceSensitivity": "ignore",
-  "svelteStrictMode": false,
-  "svelteBracketNewLine": false,
-  "svelteAllowShorthand": true,
-  "svelteIndentScriptAndStyle": true
+  "htmlWhitespaceSensitivity": "ignore"
 }

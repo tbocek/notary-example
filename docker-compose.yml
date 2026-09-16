@@ -1,7 +1,8 @@
 services:
   notary-example:
-    build: .
+    image: caddy:2-alpine
+    command: caddy file-server --root /srv --listen :3000
     ports:
       - "3000:3000"
     volumes:
-      - ./src:/app/src
+      - ./src:/srv:ro
